@@ -8,13 +8,6 @@ import json
 # 27 : empty
 # 28 ~ 30 : dummy blocks
 
-class BHB_Action(Action):
-    def __init__(self, pos):
-        self.pos
-
-    def __str__(self):
-        return '(%d)'%(self.pos)
-
 class BHB_State(State):
     def __init__(self, is_terminal, blocks, gauge, current_block):
         self.is_terminal = is_terminal
@@ -23,8 +16,7 @@ class BHB_State(State):
         self.current_block = current_block
 
 class BHB_Environment(Environment):
-    def __init__(self, gamma, size = 8):
-        self.gamma = gamma
+    def __init__(self, size = 8):
         self.size = size
 
         self.initialize_environment()
@@ -37,14 +29,6 @@ class BHB_Environment(Environment):
             else:
                 blocks[x][0] = random.randrange(0, 27)
         self.state = BHB_State(False, blocks, 0, random.randrange(0, 27))
-
-    def possible_actions(self, state):
-        actions = []
-        for x in range(0, self.size):
-            if(state.blocks[x][self.size - 1] == 27):
-                actions.append(BHB_Action(x))
-
-        return actions
 
     def check_matching(self, b1, b2, b3):
         color_matched = int((((b1 // 9) + (b2 // 9) + (b3 // 9)) % 3 == 0))
@@ -67,7 +51,6 @@ class BHB_Environment(Environment):
                     grade = self.check_matching(blocks[x][y], blocks[x][y+1], blocks[x][y+2])
                     if(grade != 0):
                         matchings.append(((x, y), 1, grade))
-        print(len(matchings))
         return matchings
 
     def grade_to_rew(self, grade):

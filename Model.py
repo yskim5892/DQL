@@ -14,11 +14,16 @@ slim = tf.contrib.slim
 
 
 class Model:
-    def __init__(self, state_shape, action_dim, args):
+    def __init__(self, hwc, ex_dim, action_dim, args):
         self.args = args
         selectGpuById(args.gpu)
-        self.state_shape = state_shape
-        self.action_shape = action_dim
+        self.hwc = hwc
+        self.h = hwc[0]
+        self.w = hwc[1]
+        self.c = hwc[2]
+        self.ex_dim = ex_dim
+
+        self.action_dim = action_dim
 
     def generate_sess(self):
         try:
@@ -65,12 +70,10 @@ class Model:
         print("Model Initialization ends")
 
     def save(self, global_step, save_dir):
-        print("Model save starts")
         for f in glob.glob(save_dir + '*'): os.remove(f)
         saver = tf.train.Saver(max_to_keep=5)
         saver.save(self.sess, os.path.join(save_dir, 'model'), global_step=global_step)
         print("Model save in %s" % save_dir)
-        print("Model save ends")
 
     def restore(self, save_dir=None, checkpoint=None, reset_iter=False):
         print("Restoring model starts...")

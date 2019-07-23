@@ -3,8 +3,8 @@ from Model import Model
 import numpy as np
 
 class DQNetwork(Model):
-    def __init__(self, state_shape, action_dim, args):
-        Model.__init__(state_shape, action_dim, args)
+    def __init__(self, hwc, ex_dim, action_dim, args):
+        Model.__init__(self, hwc, ex_dim, action_dim, args)
 
     def build(self):
         print("Model building starts")
@@ -12,18 +12,19 @@ class DQNetwork(Model):
         self.generate_sess()
 
         self.state = tf.placeholder(tf.float32, shape = \
-            [None, self.state_shape[0], self.state_shape[1], self.state_shape[2]])
-        self.Q = self.Q_net(self.state)
+                [None, self.h * self.w * self.c + self.ex_dim])
 
+        self.Q = self.Q_net(self.state)
 
         self.action = tf.placeholder(tf.float32, shape = [None, self.action_dim])
         self.reward = tf.placeholder(tf.float32, shape = [None, ])
+
         self.next_state = tf.placeholder(tf.float32, shape = \
-            [None, self.state_shape[0], self.state_shape[1], self.state_shape[2]])
+                [None, self.h * self.w * self.c + self.ex_dim])
 
         Q_next = self.Q_net(self.next_state)
         goal = self.reward + self.args.gamma * tf.reduce_max(Q_next, 1)
-        current_Q = tf.reduct_sum(tf.mul(self.Q, self.action), 1)
+        current_Q = tf.reduce_sum(self.Q * self.action, 1)
 
         self.loss = tf.reduce_mean(tf.square(goal - current_Q))
         print("Model building ends")
@@ -38,22 +39,40 @@ class DQNetwork(Model):
         print("Model building trian operation ends")
 
     def Q_net(self, state):
-        layer = state
-        layer = tf.layers.conv2d(layer, 64, [3, 3], activation=tf.nn.relu)
-        layer = tf.layers.conv2d(layer, 32, [3, 3], activation=tf.nn.relu)
-        layer = tf.reshape(layer, [-1])
-        return tf.contrib.layers.fully_connected(layer, self.action_dim, activation=tf.nn.softmax)
+        image = tf.slice(state, [0, 0], [-1, self.h * self.w * self.c])
+        image = tf.reshape(image, [-1, self.h, self.w, self.c])
+        ex = tf.slice(state, [0, self.h * self.w * self.c], [-1, self.ex_dim])
+
+        layer = image
+        layer = tf.layers.conv2d(layer, 64, [3, 3], padding='SAME', activation=tf.nn.relu)
+        layer = tf.layers.conv2d(layer, 32, [3, 3], padding='SAME', activation=tf.nn.relu)
+        layer = tf.reshape(layer, [-1, self.h * self.w * 32])
+        
+        layer = tf.concat([layer, ex], 1)
+        layer = tf.contrib.layers.fully_connected(layer, self.h * self.w * self.c + self.ex_dim)
+        layer = tf.contrib.layers.fully_connected(layer, self.action_dim)
+        return tf.nn.softmax(layer, axis=1)
+
+        '''layer = state
+        layer = tf.contrib.layers.fully_connected(layer, self.h * self.w * self.c + self.ex_dim)
+        layer = tf.contrib.layers.fully_connected(layer, self.h * self.w * self.c + self.ex_dim)
+        layer = tf.contrib.layers.fully_connected(layer, self.action_dim)
+        return tf.nn.softmax(layer, axis=1)'''
 
     def Q_value(self, state):
-        return self.sess.run(self.Q, feed_dict={self.state : state})
+        return self.sess.run(self.Q, feed_dict={self.state : [state]})
 
     def learn_from_history(self, state_history, action_history, reward_history, next_state_history):
-        step = self.sess.run(self.global_step)
-        print("step : ", step)
-        if step >= self.args.max_experience:
+        if len(state_history) >= self.args.max_experience:
             indices = np.random.choice(self.args.max_experience, self.args.batch_size)
-            feed_dict = {self.state : state_history[indices], self.action : action_history[indices],\
-                         self.reward : reward_history[indices], self.next_state : next_state_history[indices]}
+            states = [state_history[i] for i in indices]
+            actions = [action_history[i] for i in indices]
+            rewards = [reward_history[i] for i in indices]
+            next_states = [next_state_history[i] for i in indices]
+
+            feed_dict = {self.state : states, self.action : actions,\
+                         self.reward : rewards, self.next_state : next_states}
             loss, _ = self.sess.run([self.loss, self.train_op], feed_dict=feed_dict)
-            print("loss : ", loss)
+            return loss
+        return None
 
