@@ -1,5 +1,12 @@
 import os
 import json
+import math
+import tensorflow as tf
+
+def queue_smart_put(q, item, maxsize):
+    if len(q) >= maxsize:
+        q.pop(0)
+    q.append(item)
 
 def selectGpuById(id):
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -49,4 +56,26 @@ class NameFormat:
             type_attr = type(getattr(args, attr))
             setattr(args, attr, type_attr(id_split[idx]))
 
+def dist_point_line_passing_two_points(x0, x1, xd):
+    if (x0[0] == x1[0] and x0[1] == x1[1]):
+        return math.sqrt((x0[0] - xd[0])**2 + (x0[1] - xd[1])**2)
+
+    d2_0d = (x0[0] - xd[0])**2 + (x0[1] - xd[1])**2
+    d2_1d = (x1[0] - xd[0])**2 + (x1[1] - xd[1])**2
+    d2_01 = (x0[0] - x1[0])**2 + (x0[1] - x1[1])**2
+
+    if d2_0d > d2_1d + d2_01:
+        return d2_1d
+    if d2_1d > d2_0d + d2_01:
+        return d2_0d
+
+    return abs((x0[0] - x1[0]) * xd[1] - (x0[1] - x1[1]) * xd[0] - x1[1] * x0[0] + x1[0] * x0[1])\
+        / math.sqrt(d2_01)
+
+def huber_loss(x, delta=1.0):
+    return tf.where(tf.abs(x) < delta, tf.square(x) * 0.5, delta * (tf.abs(x) - 0.5 * delta))
+
+def minimize(optimizer, loss, var_list):
+    gradients = optimizer.compute_gradients(loss, var_list=var_list)
+    return optimizer.apply_gradients(gradients)
 
