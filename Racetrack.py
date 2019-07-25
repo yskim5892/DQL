@@ -36,15 +36,16 @@ class RT_Environment(Environment):
             for i in range(x, x+w):
                 track[i][y] = 1
                 self.track_poses.append([i, y])
-        
+       
         ind = np.random.choice(range(len(self.track_poses)))
         self.dest = self.track_poses[ind]
 
         self.track = track
 
     def initialize_environment(self):
-        ind = np.random.choice(range(len(self.track_poses)))
-        x = self.track_poses[ind]
+        ind = np.random.choice(range(len(self.track_poses)), 2)
+        x = self.track_poses[ind[0]]
+        #self.dest = self.track_poses[ind[1]]
         self.state = RT_State(False, self.track, x, [0, 0], self.dest)
 
     def out_of_track(self, x, y):
@@ -64,10 +65,10 @@ class RT_Environment(Environment):
             px = int(round(x + vx * i / 10))
             py = int(round(y + vy * i / 10))
             if self.out_of_track(px, py):
-                return RT_State(True, self.track, [px, py], [vx, vy], self.state.dest), -100
+                return RT_State(True, self.track, [px, py], [vx, vy], self.dest), -100
 
-        if(dist_point_line_passing_two_points([x, y], [new_x, new_y], self.state.dest) < 0.5):
-            return RT_State(True, self.track, self.state.dest, [vx, vy], self.state.dest), 100
+        if(dist_point_line_passing_two_points([x, y], [new_x, new_y], self.dest) < 0.5):
+            return RT_State(True, self.track, self.state.dest, [vx, vy], self.dest), 100
 
-        self.state = RT_State(False, self.track, [new_x, new_y], [vx, vy], self.state.dest)
+        self.state = RT_State(False, self.track, [new_x, new_y], [vx, vy], self.dest)
         return self.state, -1

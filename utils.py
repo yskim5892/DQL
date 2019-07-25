@@ -56,6 +56,18 @@ class NameFormat:
             type_attr = type(getattr(args, attr))
             setattr(args, attr, type_attr(id_split[idx]))
 
+class SummaryWriter:
+    def __init__(self, save_path):
+        self.writer = tf.summary.FileWriter(save_path)
+
+    def add_summary(self, tag, simple_value, global_step):
+        summary = tf.Summary(value=[tf.Summary.Value(tag=tag, simple_value=simple_value)])
+        self.writer.add_summary(summary, global_step)
+
+    def add_summaries(self, dict_, global_step):
+        for key in dict_.keys():
+            self.add_summary(str(key), dict_[key], global_step)
+
 def dist_point_line_passing_two_points(x0, x1, xd):
     if (x0[0] == x1[0] and x0[1] == x1[1]):
         return math.sqrt((x0[0] - xd[0])**2 + (x0[1] - xd[1])**2)

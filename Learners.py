@@ -2,9 +2,6 @@ from DQLearner import DQLearner
 import numpy as np
 
 class BHBLearner(DQLearner):
-    def __init__(self, hwc, ex_dim, action_dim, args, log_dir, save_dir):
-        super().__init__(hwc, ex_dim, action_dim, args, log_dir, save_dir)
-
     def process_state(self, state):
         blocks = np.zeros(self.hwc)
         for y in range(self.h):
@@ -22,9 +19,6 @@ class BHBLearner(DQLearner):
         return action
 
 class RTLearner(DQLearner):
-    def __init__(self, hwc, ex_dim, action_dim, args, log_dir, save_dir):
-        super().__init__(hwc, ex_dim, action_dim, args, log_dir, save_dir)
-
     def process_state(self, state):
         track = np.zeros([self.h, self.w, self.c])
 
@@ -38,7 +32,7 @@ class RTLearner(DQLearner):
         
         track = np.reshape(track, [self.h * self.w * self.c])
 
-        return np.concatenate([track, state.v, [int(state.is_terminal)]], 0)
+        return np.concatenate([track, state.v, state.x, state.dest, [int(state.is_terminal)]], 0)
     
     def decode_action(self, action):
         return [action // 3 - 1, action % 3 - 1]

@@ -26,18 +26,19 @@ if __name__ == '__main__':
     RESULT_DIR = '/home/yskim5892/DQL_results/%s/'%args.task
     LOG_DIR = RESULT_DIR + '/log/%s/'%FILE_ID
     SAVE_DIR = RESULT_DIR + '/model/%s/'%FILE_ID
+    BOARD_DIR = RESULT_DIR + '/board/%s/'%FILE_ID
     utils.create_muldir(RESULT_DIR, SAVE_DIR, LOG_DIR)
 
     if args.task == 'BHB':
         size = 8
         args.print_ep_period = 100
         BHB_env = BHB_Environment(size)
-        agent = BHBLearner([size, size, 31], 29, size, args, LOG_DIR, SAVE_DIR)
+        agent = BHBLearner([size, size, 31], 29, size, args, LOG_DIR, SAVE_DIR, BOARD_DIR)
         agent.learn(BHB_env)
 
     elif args.task == 'RT':
         size = 8
         args.print_ep_period = 1000
         RT_env = RT_Environment(size)
-        agent = RTLearner([size, size, 4], 3, 9, args, LOG_DIR, SAVE_DIR)
+        agent = RTLearner([size, size, 4], 7, 9, args, LOG_DIR, SAVE_DIR, BOARD_DIR)
         agent.learn(RT_env)
