@@ -21,7 +21,7 @@ parser.add_argument("--batch_size", default = 256, type=int)
 args = parser.parse_args()
 
 if __name__ == '__main__':
-    name_format = utils.NameFormat('lr', 'epsilon', 'gamma', 'batch_size')
+    name_format = utils.NameFormat('lr', 'epsilon', 'gamma', 'batch_size', 'target_update_period')
     FILE_ID = name_format.get_id_from_args(args)
     RESULT_DIR = '/home/yskim5892/DQL_results/%s/'%args.task
     LOG_DIR = RESULT_DIR + '/log/%s/'%FILE_ID
@@ -31,9 +31,9 @@ if __name__ == '__main__':
 
     if args.task == 'BHB':
         size = 8
-        args.print_ep_period = 100
+        args.print_ep_period = 50
         BHB_env = BHB_Environment(size)
-        agent = BHBLearner([size, size, 31], 29, size, args, LOG_DIR, SAVE_DIR, BOARD_DIR)
+        agent = BHBLearner([size, size, 53], 29, size, args, LOG_DIR, SAVE_DIR, BOARD_DIR)
         agent.learn(BHB_env)
 
     elif args.task == 'RT':

@@ -26,13 +26,15 @@ class RT_Environment(Environment):
         prev_x_max = n - 1
         self.track_poses = []
         for y in range(0, n):
-            while(True):
+            x = 0
+            w = n
+            '''while(True):
                 x = np.random.randint(0, n - 2)
                 w = np.random.randint(1, n - x + 1)
                 if(not (x > prev_x_max or x + w - 1 < prev_x_min)):
                     break
             prev_x_min = x
-            prev_x_max = x + w - 1
+            prev_x_max = x + w - 1'''
             for i in range(x, x+w):
                 track[i][y] = 1
                 self.track_poses.append([i, y])
@@ -45,7 +47,7 @@ class RT_Environment(Environment):
     def initialize_environment(self):
         ind = np.random.choice(range(len(self.track_poses)), 2)
         x = self.track_poses[ind[0]]
-        #self.dest = self.track_poses[ind[1]]
+        self.dest = self.track_poses[ind[1]]
         self.state = RT_State(False, self.track, x, [0, 0], self.dest)
 
     def out_of_track(self, x, y):
@@ -71,4 +73,4 @@ class RT_Environment(Environment):
             return RT_State(True, self.track, self.state.dest, [vx, vy], self.dest), 100
 
         self.state = RT_State(False, self.track, [new_x, new_y], [vx, vy], self.dest)
-        return self.state, -1
+        return self.state, 0

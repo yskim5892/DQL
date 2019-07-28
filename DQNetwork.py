@@ -64,36 +64,48 @@ class DQNetwork(Model):
                 
                 ### BHB-specific
                 if self.args.task == 'BHB':
-                    cur_block = tf.slice(ex, [0, 0], [-1, 27])   # b * 27
+                    '''cur_block = tf.slice(ex, [0, 0], [-1, 27])   # b * 27
                     ex = tf.slice(ex, [0, 27], [-1, 2])       # b * 2
                     cur_block_tiled_to_every_pixel = tf.reshape(tf.tile(cur_block, [1, self.h * self.w]), [-1, self.h, self.w, 27]) # b * h * w * 27
-                    image = tf.concat([image, cur_block_tiled_to_every_pixel], 3) # b * h * w * 58
+                    image = tf.concat([image, cur_block_tiled_to_every_pixel], 3) # b * h * w * 61'''
 
                     layer = image
                     layer = tf.contrib.slim.conv2d(layer, 36, [5, 5], padding='SAME')
                     layer = tf.contrib.slim.conv2d(layer, 36, [5, 5], padding='SAME')
+                    layer = tf.contrib.slim.conv2d(layer, 18, [5, 5], padding='SAME')
                     layer = tf.contrib.slim.conv2d(layer, 18, [5, 5], padding='SAME')
                     layer = tf.contrib.slim.conv2d(layer, 12, [5, 5], padding='SAME')
 
                     layer = tf.reshape(layer, [-1, self.h * self.w * 12])
                 
                     layer = tf.concat([layer, ex], 1)
+                    layer = tf.contrib.slim.fully_connected(layer, self.h * self.w * 12)
                     layer = tf.contrib.slim.fully_connected(layer, self.h * self.w * 6)
+                    layer = tf.contrib.slim.fully_connected(layer, self.h * self.w * 3)
+                    layer = tf.contrib.slim.fully_connected(layer, self.h * self.w)
+                    layer = tf.contrib.slim.fully_connected(layer, self.h * self.w // 2)
+                    layer = tf.contrib.slim.fully_connected(layer, self.h * self.w // 4)
                     layer = tf.contrib.slim.fully_connected(layer, self.action_dim, activation_fn = None)
                     return layer
                 elif self.args.task == 'RT':
                     layer = image
                     # filters, kernel_size, strides
+                    layer = tf.contrib.slim.conv2d(layer, self.c, 3, padding='SAME')
                     layer = tf.contrib.slim.conv2d(layer, 2*self.c, 3, 2, padding='SAME')
+                    layer = tf.contrib.slim.conv2d(layer, 2*self.c, 3,    padding='SAME')
                     layer = tf.contrib.slim.conv2d(layer, 4*self.c, 3, 2, padding='SAME')
+                    layer = tf.contrib.slim.conv2d(layer, 4*self.c, 3,    padding='SAME')
                     layer = tf.contrib.slim.conv2d(layer, 8*self.c, 3, 2, padding='SAME')
+                    layer = tf.contrib.slim.conv2d(layer, 8*self.c, 3,    padding='SAME')
 
                     dim = (self.h // 8) * (self.w // 8) * 8 * self.c
                     layer = tf.reshape(layer, [-1, dim])
 
                     layer = tf.concat([layer, ex, image_], 1)
+                    layer = tf.contrib.slim.fully_connected(layer, 256)
                     layer = tf.contrib.slim.fully_connected(layer, 128)
                     layer = tf.contrib.slim.fully_connected(layer, 64)
+                    layer = tf.contrib.slim.fully_connected(layer, 32)
                     layer = tf.contrib.slim.fully_connected(layer, self.action_dim, activation_fn = None)
                     return layer
         '''layer = state

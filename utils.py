@@ -2,6 +2,20 @@ import os
 import json
 import math
 import tensorflow as tf
+import pickle
+
+def write_pkl(content, path):
+    with open(path, 'wb') as f:
+        print("Pickle is written on %s"%path)
+        try:
+            pickle.dump(content, f)
+        except OverflowError:
+            pickle.dump(content, f, protocol=4)
+
+def read_pkl(path, encoding='ASCII'):
+    print("Pickle is read from %s"%path)
+    with open(path, 'rb') as f: return pickle.load(f, encoding=encoding)
+
 
 def queue_smart_put(q, item, maxsize):
     if len(q) >= maxsize:

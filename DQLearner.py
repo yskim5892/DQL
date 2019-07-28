@@ -105,16 +105,15 @@ class DQLearner:
                     self.net.save(ep, self.save_dir)
                     max_avg_sum_reward = avg_sum_reward
 
-                sum_sum_reward = 0
-                sum_avg_loss = 0
-                sum_ep_length = 0
+                sum_sum_reward, sum_av_loss, sum_ep_length = 0, 0, 0
+                self.save_trajectory(ep, trajectory)
 
             if max_sum_reward < sum_reward:
                 max_sum_reward = sum_reward
                 print('Reward ', sum_reward, ' from episode ', ep, '!')
-                
-                fname = self.log_dir + 'play' + str(ep)
-                f = open(fname, 'w')
-                f.write(str(trajectory))
-                f.close()
+                self.save_trajectory(ep, trajectory)                
+
+    def save_trajectory(self, ep, trajectory):
+        fname = self.log_dir + 'play' + str(ep) + '.pkl'
+        utils.write_pkl(trajectory, fname)
 
