@@ -3,6 +3,7 @@ from tensorflow.contrib.framework import arg_scope
 from Model import Model
 import numpy as np
 import utils
+import sys
 
 class DQNetwork(Model):
     def __init__(self, hwc, ex_dim, action_dim, args):
@@ -17,23 +18,23 @@ class DQNetwork(Model):
         self.generate_sess()
 
         self.state = tf.placeholder(tf.float32, shape = \
-                [None, self.h * self.w * self.c + self.ex_dim])
+                [self.args.batch_size, self.h * self.w * self.c + self.ex_dim])
 
         self.Q = self.Q_net(self.state, scope='q_func', trainable=True)
 
-        self.action = tf.placeholder(tf.float32, shape = [None, self.action_dim])
-        self.reward = tf.placeholder(tf.float32, shape = [None, ])
+        self.action = tf.placeholder(tf.float32, shape = [self.args.batch_size, self.action_dim])
+        self.reward = tf.placeholder(tf.float32, shape = [self.args.batch_size, 1])
 
         self.next_state = tf.placeholder(tf.float32, shape = \
-                [None, self.h * self.w * self.c + self.ex_dim])
+                [self.args.batch_size, self.h * self.w * self.c + self.ex_dim])
 
         Q_next = self.Q_net(self.next_state, scope='target_q_func', trainable=False)
-        is_terminal = tf.slice(self.next_state, [0, self.h * self.w * self.c + self.ex_dim - 1], [-1, 1]) # b * 1
+        is_terminal = tf.slice(self.next_state, [0, self.h * self.w * self.c + self.ex_dim - 1], [self.args.batch_size, 1]) # b * 1
 
-        goal = self.reward + self.args.gamma * (1 - is_terminal) * tf.reduce_max(Q_next, 1)
-        current_Q = tf.reduce_sum(self.Q * self.action, 1)
+        self.goal = self.reward + self.args.gamma * (1 - is_terminal) * tf.reduce_max(Q_next, 1, keepdims=True)
+        self.current_Q = tf.reduce_sum(self.Q * self.action, 1, keepdims=True)
 
-        self.loss = tf.reduce_mean(utils.huber_loss(goal - current_Q))
+        self.loss = tf.reduce_mean(tf.square(self.goal - self.current_Q))
 
         self.q_func_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='q_func')
         self.target_q_func_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='target_q_func')
@@ -58,9 +59,9 @@ class DQNetwork(Model):
     def Q_net(self, state, scope, trainable):
         with tf.variable_scope(scope, reuse=False):
             with tf.contrib.slim.arg_scope([tf.contrib.slim.conv2d, tf.contrib.slim.fully_connected], activation_fn=tf.nn.relu, trainable=trainable):
-                image_ = tf.slice(state, [0, 0], [-1, self.h * self.w * self.c])
-                image = tf.reshape(image_, [-1, self.h, self.w, self.c])
-                ex = tf.slice(state, [0, self.h * self.w * self.c], [-1, self.ex_dim]) # b * ex_dim
+                image_ = tf.slice(state, [0, 0], [self.args.batch_size, self.h * self.w * self.c])
+                image = tf.reshape(image_, [self.args.batch_size, self.h, self.w, self.c])
+                ex = tf.slice(state, [0, self.h * self.w * self.c], [self.args.batch_size, self.ex_dim]) # b * ex_dim
                 
                 ### BHB-specific
                 if self.args.task == 'BHB':
@@ -76,7 +77,7 @@ class DQNetwork(Model):
                     layer = tf.contrib.slim.conv2d(layer, 18, [5, 5], padding='SAME')
                     layer = tf.contrib.slim.conv2d(layer, 12, [5, 5], padding='SAME')
 
-                    layer = tf.reshape(layer, [-1, self.h * self.w * 12])
+                    layer = tf.reshape(layer, [self.args.batch_size, -1])
                 
                     layer = tf.concat([layer, ex], 1)
                     layer = tf.contrib.slim.fully_connected(layer, self.h * self.w * 12)
@@ -88,7 +89,7 @@ class DQNetwork(Model):
                     layer = tf.contrib.slim.fully_connected(layer, self.action_dim, activation_fn = None)
                     return layer
                 elif self.args.task == 'RT':
-                    layer = image
+                    '''layer = image
                     # filters, kernel_size, strides
                     layer = tf.contrib.slim.conv2d(layer, self.c, 3, padding='SAME')
                     layer = tf.contrib.slim.conv2d(layer, 2*self.c, 3, 2, padding='SAME')
@@ -98,15 +99,22 @@ class DQNetwork(Model):
                     layer = tf.contrib.slim.conv2d(layer, 8*self.c, 3, 2, padding='SAME')
                     layer = tf.contrib.slim.conv2d(layer, 8*self.c, 3,    padding='SAME')
 
-                    dim = (self.h // 8) * (self.w // 8) * 8 * self.c
-                    layer = tf.reshape(layer, [-1, dim])
+                    layer = tf.reshape(layer, [self.args.batch_size, -1])
 
                     layer = tf.concat([layer, ex, image_], 1)
                     layer = tf.contrib.slim.fully_connected(layer, 256)
                     layer = tf.contrib.slim.fully_connected(layer, 128)
                     layer = tf.contrib.slim.fully_connected(layer, 64)
                     layer = tf.contrib.slim.fully_connected(layer, 32)
+                    layer = tf.contrib.slim.fully_connected(layer, self.action_dim, activation_fn = None)'''
+
+                    layer = ex
+                    layer = tf.contrib.slim.fully_connected(layer, 7)
+                    layer = tf.contrib.slim.fully_connected(layer, 7)
+                    layer = tf.contrib.slim.fully_connected(layer, 6)
+                    layer = tf.contrib.slim.fully_connected(layer, 6)
                     layer = tf.contrib.slim.fully_connected(layer, self.action_dim, activation_fn = None)
+
                     return layer
         '''layer = state
         layer = tf.contrib.layers.fully_connected(layer, self.h * self.w * self.c + self.ex_dim)
@@ -115,15 +123,23 @@ class DQNetwork(Model):
         return tf.nn.softmax(layer, axis=1)'''
 
     def Q_value(self, state):
-        return self.sess.run(self.Q, feed_dict={self.state : [state]})
+        state_input = np.reshape(np.tile([state], self.args.batch_size), [self.args.batch_size, -1])
+        return self.sess.run(self.Q, feed_dict={self.state : state_input})[0]
 
-    def learn_from_history(self, state_history, action_history, reward_history, next_state_history):
-        if len(state_history) >= self.args.batch_size * 2:
-            indices = np.random.choice(len(state_history), self.args.batch_size)
-            states = [state_history[i] for i in indices]
-            actions = [action_history[i] for i in indices]
-            rewards = [reward_history[i] for i in indices]
-            next_states = [next_state_history[i] for i in indices]
+    def learn_from_history(self, failure_record_history, success_record_history):
+        if len(success_record_history) >= self.args.batch_size and \
+           len(failure_record_history) >= self.args.batch_size:
+            failure_ind = np.random.choice(len(failure_record_history), self.args.batch_size // 2)
+            success_ind = np.random.choice(len(success_record_history), self.args.batch_size // 2)
+            failure_records = [failure_record_history[i] for i in failure_ind]
+            success_records = [success_record_history[i] for i in success_ind]
+            
+            records = np.concatenate([failure_records, success_records])
+
+            states = [record.state for record in records]
+            actions = [record.action for record in records]
+            rewards = [[record.reward] for record in records]
+            next_states = [record.next_state for record in records]
 
             step = self.sess.run(self.global_step)
             if(step % self.args.target_update_period == 0):
@@ -133,9 +149,17 @@ class DQNetwork(Model):
                          self.reward : rewards, self.next_state : next_states}
             loss, _, _ = self.sess.run([self.loss, self.train_op, self.update_step_op], feed_dict=feed_dict)
 
-           
+                        #print(self.reward.get_shape(), self.goal.get_shape(), self.current_Q.get_shape())
+
             # norm / difference check
             if(step % 1000 == 0):
+                '''np.set_printoptions(threshold=sys.maxsize)
+                ex = tf.slice(self.state, [0, self.h * self.w * self.c], [-1, self.ex_dim])
+                next_ex = tf.slice(self.next_state, [0, self.h * self.w * self.c], [-1, self.ex_dim])
+                record = tf.concat([ex, self.action, self.reward, next_ex, self.goal, self.current_Q], 1)
+
+                print(self.sess.run(record, feed_dict=feed_dict)[123:133])'''
+
                 l2_dist = 0
                 l2_norm = 0
                 for var in self.q_func_vars:

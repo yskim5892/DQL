@@ -9,11 +9,12 @@ import json
 # 28 ~ 30 : dummy blocks
 
 class BHB_State(State):
-    def __init__(self, is_terminal, blocks, gauge, current_block):
+    def __init__(self, is_terminal, blocks, gauge, current_block, score):
         self.is_terminal = is_terminal
         self.blocks = blocks
         self.gauge = gauge
         self.current_block = current_block
+        self.score = score
 
 class BHB_Environment(Environment):
     def __init__(self, size = 8):
@@ -28,7 +29,7 @@ class BHB_Environment(Environment):
                 blocks[x][0] = 30
             else:
                 blocks[x][0] = random.randrange(0, 27)
-        self.state = BHB_State(False, blocks, 0, random.randrange(0, 27))
+        self.state = BHB_State(False, blocks, 0, random.randrange(0, 27), 0)
 
     def check_matching(self, b1, b2, b3):
         color_matched = int((((b1 // 9) + (b2 // 9) + (b3 // 9)) % 3 == 0))
@@ -104,7 +105,7 @@ class BHB_Environment(Environment):
     def respond(self, action):
         blocks = self.state.blocks.copy()
         if(blocks[action][self.size-1] != 27):
-            new_state = BHB_State(True, blocks, self.state.gauge, random.randrange(0, 27))
+            new_state = BHB_State(True, blocks, self.state.gauge, random.randrange(0, 27), self.state.score)
             self.state = new_state
             return new_state, 0
 
@@ -122,7 +123,8 @@ class BHB_Environment(Environment):
             rew, removed_columns = self.break_dummy_blocks(matchings, blocks)
             sum_rew += rew
             self.drop_boxes(removed_columns, blocks)
-
+        sum_rew *= pow(1.0002, self.state.score)
+        
         new_block = random.randrange(0, 27)
         gauge = self.state.gauge
         gauge += 1
@@ -130,13 +132,13 @@ class BHB_Environment(Environment):
             gauge = 0
             for x in range(0, self.size):
                 if(blocks[x][self.size-1] != 27):
-                    new_state = BHB_State(True, blocks, gauge, new_block)
+                    new_state = BHB_State(True, blocks, gauge, new_block, self.state.score + sum_rew)
                     self.state = new_state
                     return new_state, sum_rew
             for x in range(0, self.size):
                 for y in range(self.size - 1, 0, -1):
                     blocks[x][y] = blocks[x][y - 1]
                 blocks[x][0] = 30
-        new_state = BHB_State(False, blocks, gauge, new_block)
+        new_state = BHB_State(False, blocks, gauge, new_block, self.state.score + sum_rew)
         self.state = new_state
         return new_state, sum_rew

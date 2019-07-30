@@ -26,7 +26,7 @@ class BHBLearner(DQLearner):
         current_block = np.zeros([27])
         current_block[state.current_block] = 1
 
-        return np.concatenate((blocks, current_block, [state.gauge], [int(state.is_terminal)]), 0)
+        return np.concatenate((blocks, current_block, [state.score], [state.gauge], [int(state.is_terminal)]), 0)
 
     def two_block_match_bits(self, b1, b2):
         result = np.zeros(3)
@@ -49,6 +49,8 @@ class BHBLearner(DQLearner):
 
     def decode_action(self, action):
         return action
+    def is_success(self, reward):
+        return reward > 200
 
 class RTLearner(DQLearner):
     def process_state(self, state):
@@ -68,3 +70,5 @@ class RTLearner(DQLearner):
     
     def decode_action(self, action):
         return [action // 3 - 1, action % 3 - 1]
+    def is_success(self, reward):
+        return reward > 0

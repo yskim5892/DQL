@@ -12,6 +12,13 @@ def max_kv_in_dict(d):
             max_value = d[key]
     return max_key, max_value
 
+class Record:
+    def __init__(self, state, action, reward, next_state):
+        self.state = state
+        self.action = action
+        self.reward = reward
+        self.next_state = next_state
+
 class DQLearner:
     def __init__(self, hwc, ex_dim, action_dim, args, log_dir, save_dir, board_dir):
         self.net = DQNetwork(hwc, ex_dim, action_dim, args)
@@ -42,6 +49,8 @@ class DQLearner:
         pass
     def decode_action(self, action):
         pass
+    def is_success(self, reward):
+        pass 
 
     def process_action(self, action):
         result = np.zeros([self.action_dim])
@@ -54,7 +63,8 @@ class DQLearner:
         ep = 0
         sum_sum_reward, sum_avg_loss, sum_ep_length, max_sum_reward, max_avg_sum_reward = 0, 0, 0, float('-inf'), float('-inf')
 
-        state_history, action_history, reward_history, next_state_history = [], [], [], []
+        failure_record_history = []
+        success_record_history = []
         
         while(True):
             env.initialize_environment()
@@ -72,19 +82,20 @@ class DQLearner:
                 next_state = self.process_state(next_state)
 
                 trajectory.append([state, self.decode_action(action)])
-                utils.queue_smart_put(state_history, state, self.args.max_experience)
-                utils.queue_smart_put(action_history, self.process_action(action), self.args.max_experience)
-                utils.queue_smart_put(reward_history, reward, self.args.max_experience)
-                utils.queue_smart_put(next_state_history, next_state, self.args.max_experience)
-                
+                record = Record(state, self.process_action(action), reward, next_state)
+                if(self.is_success(reward)):
+                    utils.queue_smart_put(success_record_history, record, self.args.max_experience)
+                else:
+                    utils.queue_smart_put(failure_record_history, record, self.args.max_experience)
                 sum_reward += reward
 
-                loss = self.net.learn_from_history(state_history, action_history, reward_history, next_state_history)
+                loss = self.net.learn_from_history(failure_record_history, success_record_history)
                 if(loss != None):
                     sum_loss += loss
                     n_loss += 1
 
                 if(is_terminal):
+                    trajectory.append([next_state, None])
                     break
             
             if n_loss != 0:
@@ -105,7 +116,7 @@ class DQLearner:
                     self.net.save(ep, self.save_dir)
                     max_avg_sum_reward = avg_sum_reward
 
-                sum_sum_reward, sum_av_loss, sum_ep_length = 0, 0, 0
+                sum_sum_reward, sum_avg_loss, sum_ep_length = 0, 0, 0
                 self.save_trajectory(ep, trajectory)
 
             if max_sum_reward < sum_reward:

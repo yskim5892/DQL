@@ -11,10 +11,10 @@ parser.add_argument("--gpu", default = 0, help="Utilize which gpu", type = int)
 parser.add_argument("--gamma", default = 0.95, type = float)
 parser.add_argument("--epsilon", default = 0.1, type = float)
 parser.add_argument("--lr", default = 0.001, help="learning rate", type=float)
-parser.add_argument("--target_update_period", default = 10000, type=int)
-parser.add_argument("--decay_steps", default = 100000, type=int)
+parser.add_argument("--target_update_period", default = 2000, type=int)
+parser.add_argument("--decay_steps", default = 1e7, type=int)
 parser.add_argument("--decay_rate", default = 0.9, type=float)
-parser.add_argument("--max_experience", default = 1000000, type=int)
+parser.add_argument("--max_experience", default = 20000, type=int)
 parser.add_argument("--batch_size", default = 256, type=int)
 
 
@@ -33,7 +33,7 @@ if __name__ == '__main__':
         size = 8
         args.print_ep_period = 50
         BHB_env = BHB_Environment(size)
-        agent = BHBLearner([size, size, 53], 29, size, args, LOG_DIR, SAVE_DIR, BOARD_DIR)
+        agent = BHBLearner([size, size, 53], 30, size, args, LOG_DIR, SAVE_DIR, BOARD_DIR)
         agent.learn(BHB_env)
 
     elif args.task == 'RT':

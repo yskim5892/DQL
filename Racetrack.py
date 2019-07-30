@@ -67,10 +67,10 @@ class RT_Environment(Environment):
             px = int(round(x + vx * i / 10))
             py = int(round(y + vy * i / 10))
             if self.out_of_track(px, py):
-                return RT_State(True, self.track, [px, py], [vx, vy], self.dest), -100
+                return RT_State(True, self.track, [px, py], [vx, vy], self.dest), -10
 
         if(dist_point_line_passing_two_points([x, y], [new_x, new_y], self.dest) < 0.5):
-            return RT_State(True, self.track, self.state.dest, [vx, vy], self.dest), 100
+            return RT_State(True, self.track, self.state.dest, [vx, vy], self.dest), 10
 
         self.state = RT_State(False, self.track, [new_x, new_y], [vx, vy], self.dest)
-        return self.state, 0
+        return self.state, -1
