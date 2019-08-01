@@ -65,27 +65,32 @@ class DQNetwork(Model):
                 
                 ### BHB-specific
                 if self.args.task == 'BHB':
-                    '''cur_block = tf.slice(ex, [0, 0], [-1, 27])   # b * 27
-                    ex = tf.slice(ex, [0, 27], [-1, 2])       # b * 2
-                    cur_block_tiled_to_every_pixel = tf.reshape(tf.tile(cur_block, [1, self.h * self.w]), [-1, self.h, self.w, 27]) # b * h * w * 27
-                    image = tf.concat([image, cur_block_tiled_to_every_pixel], 3) # b * h * w * 61'''
+                    '''cur_block = tf.slice(ex, [0, 0], [self.args.batch_size, 9])   # b * 9
+                    ex = tf.slice(ex, [0, 9], [self.args.batch_size, 2])       # b * 2
+                    cur_block_tiled_to_every_pixel = tf.reshape(tf.tile(cur_block, [1, self.h * self.w]), [self.args.batch_size, self.h, self.w, 9]) # b * h * w * 9
+                    image = tf.concat([image, cur_block_tiled_to_every_pixel], 3) # b * h * w * 41'''
 
                     layer = image
-                    layer = tf.contrib.slim.conv2d(layer, 36, [5, 5], padding='SAME')
-                    layer = tf.contrib.slim.conv2d(layer, 36, [5, 5], padding='SAME')
-                    layer = tf.contrib.slim.conv2d(layer, 18, [5, 5], padding='SAME')
-                    layer = tf.contrib.slim.conv2d(layer, 18, [5, 5], padding='SAME')
-                    layer = tf.contrib.slim.conv2d(layer, 12, [5, 5], padding='SAME')
+                    layer = tf.contrib.slim.conv2d(layer, 16, [5, 5], padding='SAME')
+                    layer = tf.contrib.slim.conv2d(layer, 16, [3, 3], padding='SAME')
+                    layer = tf.contrib.slim.conv2d(layer, 8, [3, 3], padding='SAME')
+                    layer = tf.contrib.slim.conv2d(layer, 8, [3, 3], padding='SAME')
+                    layer = tf.contrib.slim.conv2d(layer, 4, [1, 1], padding='SAME')
+                    layer = tf.contrib.slim.conv2d(layer, 4, [1, 1], padding='SAME')
 
                     layer = tf.reshape(layer, [self.args.batch_size, -1])
                 
                     layer = tf.concat([layer, ex], 1)
-                    layer = tf.contrib.slim.fully_connected(layer, self.h * self.w * 12)
-                    layer = tf.contrib.slim.fully_connected(layer, self.h * self.w * 6)
-                    layer = tf.contrib.slim.fully_connected(layer, self.h * self.w * 3)
+                    layer = tf.contrib.slim.fully_connected(layer, self.h * self.w * 4)
+                    layer = tf.contrib.slim.fully_connected(layer, self.h * self.w * 2)
+                    layer = tf.contrib.slim.fully_connected(layer, self.h * self.w * 2)
+                    layer = tf.contrib.slim.fully_connected(layer, self.h * self.w)
                     layer = tf.contrib.slim.fully_connected(layer, self.h * self.w)
                     layer = tf.contrib.slim.fully_connected(layer, self.h * self.w // 2)
+                    layer = tf.contrib.slim.fully_connected(layer, self.h * self.w // 2)
                     layer = tf.contrib.slim.fully_connected(layer, self.h * self.w // 4)
+                    layer = tf.contrib.slim.fully_connected(layer, self.h * self.w // 4)
+
                     layer = tf.contrib.slim.fully_connected(layer, self.action_dim, activation_fn = None)
                     return layer
                 elif self.args.task == 'RT':
@@ -149,16 +154,16 @@ class DQNetwork(Model):
                          self.reward : rewards, self.next_state : next_states}
             loss, _, _ = self.sess.run([self.loss, self.train_op, self.update_step_op], feed_dict=feed_dict)
 
-                        #print(self.reward.get_shape(), self.goal.get_shape(), self.current_Q.get_shape())
+            #print(self.reward.get_shape(), self.goal.get_shape(), self.current_Q.get_shape())
 
             # norm / difference check
             if(step % 1000 == 0):
                 '''np.set_printoptions(threshold=sys.maxsize)
                 ex = tf.slice(self.state, [0, self.h * self.w * self.c], [-1, self.ex_dim])
                 next_ex = tf.slice(self.next_state, [0, self.h * self.w * self.c], [-1, self.ex_dim])
-                record = tf.concat([ex, self.action, self.reward, next_ex, self.goal, self.current_Q], 1)
+                record = tf.concat([ex, self.action, self.reward, next_ex, self.goal, self.current_Q], 1)'''
 
-                print(self.sess.run(record, feed_dict=feed_dict)[123:133])'''
+                print(self.sess.run(tf.concat([self.goal, self.current_Q], 1), feed_dict=feed_dict)[123:133])
 
                 l2_dist = 0
                 l2_norm = 0

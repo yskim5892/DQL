@@ -1,6 +1,7 @@
 import numpy as np
 import utils
 from DQNetwork import DQNetwork
+import sys
 #from BHB_display import BHB_display
 
 def max_kv_in_dict(d):
@@ -40,16 +41,17 @@ class DQLearner:
 
     def epsilon_greedy_policy(self, state):
         if(np.random.random() <= self.args.epsilon):
-            return np.random.randint(self.action_dim)
+            return None, np.random.randint(self.action_dim)
         else:
-            return np.argmax(self.net.Q_value(state))
+            Q = self.net.Q_value(state)
+            return Q, np.argmax(Q)
 
     # task_specific
     def process_state(self, state):
         pass
     def decode_action(self, action):
         pass
-    def is_success(self, reward):
+    def is_success(self, state, reward):
         pass 
 
     def process_action(self, action):
@@ -76,14 +78,15 @@ class DQLearner:
                 ep_length += 1
                 state = self.process_state(env.state) 
 
-                action = self.epsilon_greedy_policy(state)
+                Q, action = self.epsilon_greedy_policy(state)
                 next_state, reward= env.respond(self.decode_action(action))
+                is_success = self.is_success(next_state, reward)
                 is_terminal = next_state.is_terminal
                 next_state = self.process_state(next_state)
 
-                trajectory.append([state, self.decode_action(action)])
+                trajectory.append([state, self.decode_action(action), Q])
                 record = Record(state, self.process_action(action), reward, next_state)
-                if(self.is_success(reward)):
+                if(is_success):
                     utils.queue_smart_put(success_record_history, record, self.args.max_experience)
                 else:
                     utils.queue_smart_put(failure_record_history, record, self.args.max_experience)
@@ -95,7 +98,7 @@ class DQLearner:
                     n_loss += 1
 
                 if(is_terminal):
-                    trajectory.append([next_state, None])
+                    trajectory.append([next_state, None, None])
                     break
             
             if n_loss != 0:
