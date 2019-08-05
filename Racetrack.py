@@ -28,13 +28,13 @@ class RT_Environment(Environment):
         for y in range(0, n):
             x = 0
             w = n
-            '''while(True):
+            while(True):
                 x = np.random.randint(0, n - 2)
                 w = np.random.randint(1, n - x + 1)
                 if(not (x > prev_x_max or x + w - 1 < prev_x_min)):
                     break
             prev_x_min = x
-            prev_x_max = x + w - 1'''
+            prev_x_max = x + w - 1
             for i in range(x, x+w):
                 track[i][y] = 1
                 self.track_poses.append([i, y])
@@ -56,10 +56,10 @@ class RT_Environment(Environment):
     def respond(self, action):
         x = self.state.x[0]
         y = self.state.x[1]
-        vx = self.state.v[0]
-        vy = self.state.v[1]
-        vx += action[0]
-        vy += action[1]
+        #vx = self.state.v[0]
+        #vy = self.state.v[1]
+        vx = action[0]
+        vy = action[1]
         new_x = x + vx
         new_y = y + vy
 

@@ -94,7 +94,7 @@ class DQNetwork(Model):
                     layer = tf.contrib.slim.fully_connected(layer, self.action_dim, activation_fn = None)
                     return layer
                 elif self.args.task == 'RT':
-                    '''layer = image
+                    layer = image
                     # filters, kernel_size, strides
                     layer = tf.contrib.slim.conv2d(layer, self.c, 3, padding='SAME')
                     layer = tf.contrib.slim.conv2d(layer, 2*self.c, 3, 2, padding='SAME')
@@ -107,18 +107,22 @@ class DQNetwork(Model):
                     layer = tf.reshape(layer, [self.args.batch_size, -1])
 
                     layer = tf.concat([layer, ex, image_], 1)
+                    layer = tf.contrib.slim.fully_connected(layer, 512)
                     layer = tf.contrib.slim.fully_connected(layer, 256)
                     layer = tf.contrib.slim.fully_connected(layer, 128)
                     layer = tf.contrib.slim.fully_connected(layer, 64)
                     layer = tf.contrib.slim.fully_connected(layer, 32)
-                    layer = tf.contrib.slim.fully_connected(layer, self.action_dim, activation_fn = None)'''
-
-                    layer = ex
-                    layer = tf.contrib.slim.fully_connected(layer, 7)
-                    layer = tf.contrib.slim.fully_connected(layer, 7)
-                    layer = tf.contrib.slim.fully_connected(layer, 6)
-                    layer = tf.contrib.slim.fully_connected(layer, 6)
                     layer = tf.contrib.slim.fully_connected(layer, self.action_dim, activation_fn = None)
+
+                    '''layer = ex
+                    layer = tf.contrib.slim.fully_connected(layer, 7)
+                    layer = tf.contrib.slim.fully_connected(layer, 7)
+                    layer = tf.contrib.slim.fully_connected(layer, 7)
+                    layer = tf.contrib.slim.fully_connected(layer, 6)
+                    layer = tf.contrib.slim.fully_connected(layer, 6)
+                    layer = tf.contrib.slim.fully_connected(layer, 6)
+                    layer = tf.contrib.slim.fully_connected(layer, 6)
+                    layer = tf.contrib.slim.fully_connected(layer, self.action_dim, activation_fn = None)'''
 
                     return layer
         '''layer = state
@@ -163,7 +167,7 @@ class DQNetwork(Model):
                 next_ex = tf.slice(self.next_state, [0, self.h * self.w * self.c], [-1, self.ex_dim])
                 record = tf.concat([ex, self.action, self.reward, next_ex, self.goal, self.current_Q], 1)'''
 
-                print(self.sess.run(tf.concat([self.goal, self.current_Q], 1), feed_dict=feed_dict)[123:133])
+                #print(self.sess.run(tf.concat([self.goal, self.current_Q], 1), feed_dict=feed_dict)[123:133])
 
                 l2_dist = 0
                 l2_norm = 0

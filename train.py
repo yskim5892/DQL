@@ -38,5 +38,5 @@ if __name__ == '__main__':
     elif args.task == 'RT':
         args.print_ep_period = 1000
         RT_env = RT_Environment(args.size)
-        agent = RTLearner([args.size, args.size, 4], 7, 9, args, LOG_DIR, SAVE_DIR, BOARD_DIR)
+        agent = RTLearner([args.size, args.size, 3], 5, 9, args, LOG_DIR, SAVE_DIR, BOARD_DIR)
         agent.learn(RT_env)
