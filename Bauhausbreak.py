@@ -1,5 +1,4 @@
 from Environment import *
-from DQLearner import *
 import numpy as np
 import random
 import json
@@ -154,3 +153,19 @@ class BHB_Environment(Environment):
         new_state = BHB_State(False, blocks, gauge, new_block, sum_sum_grade, self.state.score + sum_rew)
         self.state = new_state
         return new_state, sum_rew
+
+    def grade_for_action(self, action):
+        x = action
+        blocks = self.state.blocks
+        max_grade = 0
+        for y in range(0, self.size):
+            if(blocks[x][y] == 27):
+                break
+        for dx1, dy1, dx2, dy2 in [(-2, 0, -1, 0), (-1, 0, 1, 0), (1, 0, 2, 0), (0, -1, 0, -2)]:
+            try:
+                grade = check_matching(blocks[x+dx1][y+dy1], blocks[x+dx2][y+dy2], self.state.current_block)
+                if(grade >= max_grade):
+                    max_grade = grade
+            except IndexError:
+                pass
+        return max_grade
