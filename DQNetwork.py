@@ -23,15 +23,15 @@ class DQNetwork(Model):
         self.Q = self.Q_net(self.state, scope='q_func', trainable=True)
 
         self.action = tf.placeholder(tf.float32, shape = [self.args.batch_size, self.action_dim])
-        self.reward = tf.placeholder(tf.float32, shape = [self.args.batch_size, 1])
+        self.G = tf.placeholder(tf.float32, shape = [self.args.batch_size, 1])
 
-        self.next_state = tf.placeholder(tf.float32, shape = \
+        self.later_state = tf.placeholder(tf.float32, shape = \
                 [self.args.batch_size, self.h * self.w * self.c + self.ex_dim])
 
-        Q_next = self.Q_net(self.next_state, scope='target_q_func', trainable=False)
-        is_terminal = tf.slice(self.next_state, [0, self.h * self.w * self.c + self.ex_dim - 1], [self.args.batch_size, 1]) # b * 1
+        Q_later = self.Q_net(self.later_state, scope='target_q_func', trainable=False)
+        is_terminal = tf.slice(self.later_state, [0, self.h * self.w * self.c + self.ex_dim - 1], [self.args.batch_size, 1]) # b * 1
 
-        self.goal = self.reward + self.args.gamma * (1 - is_terminal) * tf.reduce_max(Q_next, 1, keepdims=True)
+        self.goal = self.G + pow(self.args.gamma, self.args.n) * (1 - is_terminal) * tf.reduce_max(Q_later, 1, keepdims=True)
         self.current_Q = tf.reduce_sum(self.Q * self.action, 1, keepdims=True)
 
         self.loss = tf.reduce_mean(tf.square(self.goal - self.current_Q))
@@ -101,17 +101,15 @@ class DQNetwork(Model):
                     layer = tf.contrib.slim.conv2d(layer, 2*self.c, 3,    padding='SAME')
                     layer = tf.contrib.slim.conv2d(layer, 4*self.c, 3, 2, padding='SAME')
                     layer = tf.contrib.slim.conv2d(layer, 4*self.c, 3,    padding='SAME')
-                    layer = tf.contrib.slim.conv2d(layer, 8*self.c, 3, 2, padding='SAME')
-                    layer = tf.contrib.slim.conv2d(layer, 8*self.c, 3,    padding='SAME')
 
                     layer = tf.reshape(layer, [self.args.batch_size, -1])
 
-                    layer = tf.concat([layer, ex, image_], 1)
-                    layer = tf.contrib.slim.fully_connected(layer, 512)
-                    layer = tf.contrib.slim.fully_connected(layer, 256)
+                    layer = tf.concat([layer, ex], 1)
+                    layer = tf.contrib.slim.fully_connected(layer, 192)
                     layer = tf.contrib.slim.fully_connected(layer, 128)
                     layer = tf.contrib.slim.fully_connected(layer, 64)
                     layer = tf.contrib.slim.fully_connected(layer, 32)
+                    layer = tf.contrib.slim.fully_connected(layer, 16)
                     layer = tf.contrib.slim.fully_connected(layer, self.action_dim, activation_fn = None)
 
                     '''layer = ex
@@ -147,15 +145,15 @@ class DQNetwork(Model):
 
             states = [record.state for record in records]
             actions = [record.action for record in records]
-            rewards = [[record.reward] for record in records]
-            next_states = [record.next_state for record in records]
+            Gs = [[record.G] for record in records]
+            later_states = [record.later_state for record in records]
 
             step = self.sess.run(self.global_step)
             if(step % self.args.target_update_period == 0):
                 self.sess.run(self.update_target_fn)
             
             feed_dict = {self.state : states, self.action : actions,\
-                         self.reward : rewards, self.next_state : next_states}
+                         self.G : Gs, self.later_state : later_states}
             loss, _, _ = self.sess.run([self.loss, self.train_op, self.update_step_op], feed_dict=feed_dict)
 
             #print(self.reward.get_shape(), self.goal.get_shape(), self.current_Q.get_shape())

@@ -1,6 +1,7 @@
 import numpy as np
 import utils
 from DQNetwork import DQNetwork
+import Learners
 import sys
 #from BHB_display import BHB_display
 
@@ -14,11 +15,11 @@ def max_kv_in_dict(d):
     return max_key, max_value
 
 class Record:
-    def __init__(self, state, action, reward, next_state):
+    def __init__(self, state, action, G, later_state):
         self.state = state
         self.action = action
-        self.reward = reward
-        self.next_state = next_state
+        self.G = G
+        self.later_state = later_state
 
 class DQLearner:
     def __init__(self, hwc, ex_dim, action_dim, args, log_dir, save_dir, board_dir):
@@ -34,6 +35,8 @@ class DQLearner:
         self.action_dim = action_dim
         self.hwc = hwc
         self.h, self.w, self.c = hwc[0], hwc[1], hwc[2]
+        self.ex_dim = ex_dim
+        self.img_dim = self.h * self.w * self.c
         self.save_dir = save_dir
         self.log_dir = log_dir
         self.board_dir = board_dir
@@ -48,34 +51,61 @@ class DQLearner:
 
     # task_specific
     def process_state(self, state):
-        pass
+        if(self.args.task == 'BHB'):
+            return Learners.process_state_BHB(self.hwc, state)
+        elif(self.args.task == 'RT'):
+            return Learners.process_state_RT(self.hwc, self.env, state)
+
     def decode_action(self, action):
-        pass
+        if(self.args.task == 'BHB'):
+            return Learners.decode_action_BHB(action)
+        elif(self.args.task == 'RT'):
+            return Learners.decode_action_RT(action)
+
     def is_success(self, state, reward):
-        pass 
+        if(self.args.task == 'BHB'):
+            return Learners.is_success_BHB(state, reward)
+        elif(self.args.task == 'RT'):
+            return Learners.is_success_RT(state, reward)
 
     def process_action(self, action):
         result = np.zeros([self.action_dim])
         result[action] = 1
         return result
 
+    def record_n_steps_record(self, history, trajectory, next_state, t, n):
+        tau = t - n
+        G = 0
+        for i in range(tau, tau + n):
+            G += pow(self.args.gamma, i - tau) * trajectory[i][2]
+        state_n_steps_ago = trajectory[tau][0]
+        action_n_steps_ago = trajectory[tau][1]
+        record = Record(state_n_steps_ago, self.process_action(action_n_steps_ago), G, next_state)
+        utils.queue_smart_put(history, record, self.args.max_experience)
+
     def learn(self, env):
         self.env = env
         self.writer = utils.SummaryWriter(self.board_dir)
         ep = 0
+        n = self.args.n
         sum_sum_reward, sum_avg_loss, sum_ep_length, max_sum_reward, max_avg_sum_reward = 0, 0, 0, float('-inf'), float('-inf')
 
         failure_record_history = []
-        success_record_history = []
-        
+
+        try:
+            success_record_history = self.env.make_success_records(self.args.batch_size, self.args.n, self.args.gamma, self.process_state, self.decode_action, self.process_action)
+        except AttributeError:
+            print('Failed to call make_succes_records funtion!')
+            success_record_history = []
+        temp_i = 0
         while(True):
             env.initialize_environment()
             ep += 1
-            sum_reward, sum_loss, n_loss, ep_length = 0, 0, 0, 0
+            sum_reward, sum_loss, n_loss, t = 0, 0, 0, 0
 
-            trajectory = []
+            trajectory = [] # list of pair of (state, action, reward, Q)
             while(True):
-                ep_length += 1
+                t += 1
                 state = self.process_state(env.state) 
 
                 Q, action = self.epsilon_greedy_policy(state)
@@ -84,12 +114,19 @@ class DQLearner:
                 is_terminal = next_state.is_terminal
                 next_state = self.process_state(next_state)
 
-                trajectory.append([state, self.decode_action(action), Q])
-                record = Record(state, self.process_action(action), reward, next_state)
+                trajectory.append([state, action, reward, Q])
+                
                 if(is_success):
-                    utils.queue_smart_put(success_record_history, record, self.args.max_experience)
+                    history = success_record_history
                 else:
-                    utils.queue_smart_put(failure_record_history, record, self.args.max_experience)
+                    history = failure_record_history
+
+                if(is_terminal):
+                    for i in range(1, min(n+1, t)):
+                        self.record_n_steps_record(history, trajectory, next_state, t, i)
+                elif t >= n:
+                    self.record_n_steps_record(history, trajectory, next_state, t, n)
+                
                 sum_reward += reward
 
                 loss = self.net.learn_from_history(failure_record_history, success_record_history)
@@ -104,7 +141,7 @@ class DQLearner:
             if n_loss != 0:
                 sum_avg_loss += sum_loss / n_loss
             sum_sum_reward += sum_reward
-            sum_ep_length += ep_length
+            sum_ep_length += t
             if ep % self.args.print_ep_period == 0:
                 avg_sum_reward = sum_sum_reward / self.args.print_ep_period
                 avg_avg_loss = sum_avg_loss / self.args.print_ep_period
