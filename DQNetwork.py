@@ -133,7 +133,7 @@ class DQNetwork(Model):
         state_input = np.reshape(np.tile([state], self.args.batch_size), [self.args.batch_size, -1])
         return self.sess.run(self.Q, feed_dict={self.state : state_input})[0]
 
-    def learn_from_history(self, failure_record_history, success_record_history):
+    def learn_from_history(self, failure_record_history, success_record_history, logger):
         if len(success_record_history) >= self.args.batch_size and \
            len(failure_record_history) >= self.args.batch_size:
             failure_ind = np.random.choice(len(failure_record_history), self.args.batch_size // 2)
@@ -185,7 +185,7 @@ class DQNetwork(Model):
                         target_l2_norm += np.sum(np.square(value))
                     self.target_q_vars_dict[var] = value
                 Q_norm = np.sqrt(np.sum(np.square(self.sess.run(self.Q, feed_dict=feed_dict))))
-                print(step, loss, np.sqrt(l2_dist), np.sqrt(l2_norm), np.sqrt(target_l2_dist), np.sqrt(target_l2_norm), Q_norm)
+                logger.log(str(step) + ' ' + str(loss) + ' ' + str(np.sqrt(l2_dist)) + ' ' + str(np.sqrt(l2_norm)) + ' ' + str(np.sqrt(target_l2_dist)) + ' ' + str(np.sqrt(target_l2_norm)) + ' ' + str(Q_norm))
 
             return loss
         return None

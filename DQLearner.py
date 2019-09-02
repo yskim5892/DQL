@@ -1,5 +1,6 @@
 import numpy as np
 import utils
+from Logger import Logger
 from DQNetwork import DQNetwork
 import Learners
 import sys
@@ -39,6 +40,7 @@ class DQLearner:
         self.img_dim = self.h * self.w * self.c
         self.save_dir = save_dir
         self.log_dir = log_dir
+        self.logger = Logger(log_dir + '/train_log')
         self.board_dir = board_dir
         self.args = args
 
@@ -129,7 +131,7 @@ class DQLearner:
                 
                 sum_reward += reward
 
-                loss = self.net.learn_from_history(failure_record_history, success_record_history)
+                loss = self.net.learn_from_history(failure_record_history, success_record_history, self.logger)
                 if(loss != None):
                     sum_loss += loss
                     n_loss += 1
@@ -147,7 +149,7 @@ class DQLearner:
                 avg_avg_loss = sum_avg_loss / self.args.print_ep_period
                 avg_ep_length = sum_ep_length / self.args.print_ep_period
 
-                print('episode : ', ep, ', avg_rew :', avg_sum_reward, ', avg_loss :', avg_avg_loss, ', avg_ep_length :', avg_ep_length)
+                self.logger.log('episode : ' + str(ep) + ', avg_rew :' + str(avg_sum_reward) + ', avg_loss :' + str(avg_avg_loss) + ', avg_ep_length :' + str(avg_ep_length))
 
                 summary_dict = {"learning rate" : self.net.sess.run(self.net.lr), "average_reward" : avg_sum_reward, "average_loss" : avg_avg_loss, "average_episode_length" : avg_ep_length}
                 self.writer.add_summaries(summary_dict, ep)
@@ -161,7 +163,7 @@ class DQLearner:
 
             if max_sum_reward < sum_reward:
                 max_sum_reward = sum_reward
-                print('Reward ', sum_reward, ' from episode ', ep, '!')
+                self.logger.log('Reward ' + str(sum_reward) + ' from episode ' + str(ep) + '!')
                 self.save_trajectory(ep, trajectory)                
 
     def save_trajectory(self, ep, trajectory):
